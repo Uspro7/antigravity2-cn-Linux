@@ -2,12 +2,15 @@
 
 👉 **[繁體中文版說明文件 (Traditional Chinese README)](README_TW.md)**
 
+> [!IMPORTANT]
+> **关于上游仓库与本项目定位**：  
+> 本项目的上游仓库是 **[qqxpee/antigravity2-cn](https://github.com/qqxpee/antigravity2-cn)**。上游原版主要面向 Windows 与 macOS 平台，**我们只做了 Linux 平台的适配工作**（包括 Linux 目录探测、Linux 进程管理与内置零依赖纯 JS ASAR 引擎）。汉化词库与基础注入逻辑均来自于上游仓库。如果您使用的是 Windows 或 macOS，请直接前往上游仓库获取对应版本。
+
 > **支持系统**：Linux (Ubuntu / Debian / Fedora / Arch Linux / openSUSE / Deepin / Manjaro 等所有主流发行版)  
 > **匹配版本**：Antigravity v2.12.2+  
 > **核心引擎**：Node.js (**内置纯 JS 零依赖 ASAR 解包与打包引擎，100% 离线极速运行**)  
 > **汉化范围**：包括软件界面、顶部系统菜单、任务栏托盘右键菜单、加载动画、参数设置面板、新手引导及登录页。  
-> **注入原理**：基于 ASAR 物理层解包与精准重包机制，安全注入 `preload.js` 动态翻译机制，绝不修改核心二进制，支持一键无痕还原官方英文原版。  
-> **项目说明**：专为 Linux 平台量身打造，彻底解决了原版依赖 `npx @electron/asar` 导致网络受限卡死的问题，提供原生 Linux 路径探测与双击/终端一键安装脚本。
+> **注入原理**：基于 ASAR 物理层解包与精准重包机制，安全注入 `preload.js` 动态翻译机制，绝不修改核心二进制，支持一键无痕还原官方英文原版。
 
 ---
 
@@ -197,5 +200,6 @@ node localization_engine.js --huifu
 
 ## 🤝 致谢与声明
 
-- 基础词典与部分结构灵感致谢：**[qqxpee/antigravity2-cn](https://github.com/qqxpee/antigravity2-cn)**
+- 本项目上游仓库：**[qqxpee/antigravity2-cn](https://github.com/qqxpee/antigravity2-cn)**，感谢原作者整理的详尽词典与基础架构！本项目仅针对 Linux 平台进行了专属适配与脚本编写。
+- Windows / macOS 用户请前往上游仓库获取对应的官方一键脚本。
 - 欢迎提交 Issue 与 PR 共同完善 Linux 中文生态！
