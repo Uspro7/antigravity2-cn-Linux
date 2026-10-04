@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const crypto = require('crypto');
 const child_process = require('child_process');
 
 // --tw 參數：使用繁體中文字典 (dicts_tw/)，否則使用預設簡體字典 (dicts/)
@@ -93,6 +95,10 @@ if (USE_TW) {
         "[代理] 检测到 proxy_config 配置目录，正在注入代理模块...": "[代理] 偵測到 proxy_config 設定目錄，正在注入代理模組...",
         "[代理] 代理模块注入成功: ": "[代理] 代理模組注入成功: ",
         "[代理] 已清理代理注入文件: ": "[代理] 已清理代理注入檔案: ",
+        "[解包] 正在提取 app.asar...": "[解包] 正在解包 app.asar...",
+        "[权限] 检测到当前用户对": "[權限] 偵測到目前使用者對",
+        "[提示] 应用目录写入受限，请使用管理员权限 (sudo) 运行脚本。": "[提示] 應用程式目錄寫入受限，請使用管理員權限 (sudo) 執行腳本。",
+        "[警告] 未找到客户端主程序 (antigravity/Antigravity)": "[警告] 未找到用戶端主程式 (antigravity/Antigravity)",
         "[代理警告] 注入文件 ": "[代理警告] 注入檔案 ",
         "[代理警告] 移除代理文件 ": "[代理警告] 移除代理檔案 "
     };
@@ -564,6 +570,9 @@ function checkIfAppIsRunning() {
         } else if (process.platform === 'darwin') {
             const stdout = child_process.execSync('pgrep -f Antigravity', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
             return stdout.trim().length > 0;
+        } else if (process.platform === 'linux') {
+            const stdout = child_process.execSync('pgrep -x antigravity || pgrep -x Antigravity', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+            return stdout.trim().length > 0;
         }
     } catch (e) {
         // ignore
@@ -576,8 +585,10 @@ function closeAntigravityProcesses() {
     try {
         if (process.platform === 'win32') {
             child_process.execSync('taskkill /f /im Antigravity.exe /t >nul 2>nul');
-        } else {
+        } else if (process.platform === 'darwin') {
             child_process.execSync('pkill -f Antigravity >/dev/null 2>&1');
+        } else if (process.platform === 'linux') {
+            child_process.execSync('pkill -x antigravity >/dev/null 2>&1 ; pkill -x Antigravity >/dev/null 2>&1');
         }
     } catch (e) {
         // ignore
@@ -658,6 +669,77 @@ function detectInstallationDir(manualDir) {
     } else if (process.platform === 'darwin') {
         addCandidate("/Applications/Antigravity.app");
         addCandidate(path.join(process.env.HOME || '', 'Applications', 'Antigravity.app'));
+    } else if (process.platform === 'linux') {
+        addCandidate(process.env.ANTIGRAVITY_INSTALL_DIR);
+        addCandidate(process.env.ANTIGRAVITY_HOME);
+
+        const home = os.homedir();
+        // Common user directories
+        addCandidate(path.join(home, 'ProgramFile', 'Antigravity-x64'));
+        addCandidate(path.join(home, 'ProgramFile', 'Antigravity'));
+        addCandidate(path.join(home, 'Programs', 'Antigravity-x64'));
+        addCandidate(path.join(home, 'Programs', 'Antigravity'));
+        addCandidate(path.join(home, 'Programs', 'antigravity'));
+        addCandidate(path.join(home, '.local', 'share', 'antigravity'));
+        addCandidate(path.join(home, '.local', 'share', 'Antigravity'));
+        addCandidate(path.join(home, 'Antigravity'));
+        addCandidate(path.join(home, 'antigravity'));
+
+        // System directories
+        addCandidate('/opt/Antigravity-x64');
+        addCandidate('/opt/Antigravity');
+        addCandidate('/opt/antigravity');
+        addCandidate('/usr/lib/antigravity');
+        addCandidate('/usr/share/antigravity');
+        addCandidate('/usr/local/antigravity');
+
+        // Check PATH via which
+        try {
+            const whichOut = child_process.execSync('which antigravity 2>/dev/null || which Antigravity 2>/dev/null', { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+            if (whichOut) {
+                const real = fs.realpathSync(whichOut);
+                addCandidate(path.dirname(real));
+                addCandidate(path.dirname(path.dirname(real)));
+            }
+        } catch (e) {}
+
+        // Check Desktop entries
+        const desktopDirs = [
+            path.join(home, '.local', 'share', 'applications'),
+            '/usr/share/applications',
+            '/usr/local/share/applications'
+        ];
+        for (const d of desktopDirs) {
+            if (fs.existsSync(d)) {
+                try {
+                    const files = fs.readdirSync(d);
+                    for (const f of files) {
+                        if (/antigravity/i.test(f) && f.endsWith('.desktop')) {
+                            const content = fs.readFileSync(path.join(d, f), 'utf-8');
+                            const m = content.match(/^Exec=(?:\"([^\"]+)\"|(\S+))/m);
+                            if (m) {
+                                const execPath = m[1] || m[2];
+                                if (execPath) {
+                                    addCandidate(path.dirname(execPath));
+                                    addCandidate(path.dirname(path.dirname(execPath)));
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+
+        // Check running process exe symlink
+        try {
+            const pids = child_process.execSync('pgrep -x antigravity || pgrep -x Antigravity', { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim().split(/\s+/);
+            for (const pid of pids) {
+                if (pid && fs.existsSync(`/proc/${pid}/exe`)) {
+                    const exeTarget = fs.readlinkSync(`/proc/${pid}/exe`);
+                    addCandidate(path.dirname(exeTarget));
+                }
+            }
+        } catch (e) {}
     }
 
     for (const p of candidates) {
@@ -741,13 +823,14 @@ function resignAppOnMac(anyPath) {
 }
 
 function ensureWritePermission(targetDir) {
-    if (process.platform !== 'darwin') return true;
+    if (process.platform !== 'darwin' && process.platform !== 'linux') return true;
     try {
         fs.accessSync(targetDir, fs.constants.W_OK);
         return true;
     } catch (err) {
         if (process.getuid && process.getuid() !== 0) {
-            console.log("[权限] 检测到当前用户对 macOS 应用目录缺少写入权限，正在尝试请求管理员权限 (sudo) 重新运行...");
+            const platformName = process.platform === 'darwin' ? 'macOS' : 'Linux';
+            console.log(`[权限] 检测到当前用户对 ${platformName} 应用目录缺少写入权限 (${targetDir})，正在尝试请求管理员权限 (sudo) 重新运行...`);
             const args = process.argv.slice(1);
             const res = child_process.spawnSync('sudo', [process.execPath, ...args], {
                 stdio: 'inherit'
@@ -755,12 +838,147 @@ function ensureWritePermission(targetDir) {
             if (res.status === 0) {
                 process.exit(0);
             } else {
-                console.error("\n[错误] 管理员提权执行失败或用户取消了密码输入。");
+                console.error("\n[错误] 管理员提权执行失败或用户取消了密码输入。请手动使用 sudo 运行此脚本。");
                 process.exit(res.status || 1);
             }
         }
         return false;
     }
+}
+
+// ==========================================
+// 内置零依赖 ASAR 解包与打包引擎 (Pure Node.js)
+// ==========================================
+function computeAsarIntegrity(buffer) {
+    const BLOCK_SIZE = 4 * 1024 * 1024;
+    const blocks = [];
+    const fullHash = crypto.createHash('sha256').update(buffer).digest('hex');
+    for (let offset = 0; offset < buffer.length; offset += BLOCK_SIZE) {
+        const slice = buffer.slice(offset, Math.min(offset + BLOCK_SIZE, buffer.length));
+        blocks.push(crypto.createHash('sha256').update(slice).digest('hex'));
+    }
+    return {
+        algorithm: 'SHA256',
+        hash: fullHash,
+        blockSize: BLOCK_SIZE,
+        blocks: blocks.length > 0 ? blocks : [fullHash]
+    };
+}
+
+function pureExtractAsar(asarPath, destDir) {
+    const fd = fs.openSync(asarPath, 'r');
+    const headerBuf = Buffer.alloc(16);
+    fs.readSync(fd, headerBuf, 0, 16, 0);
+    const jsonLen = headerBuf.readUInt32LE(12);
+    const jsonBuf = Buffer.alloc(jsonLen);
+    fs.readSync(fd, jsonBuf, 0, jsonLen, 16);
+    const header = JSON.parse(jsonBuf.toString('utf8'));
+    const baseOffset = 8 + headerBuf.readUInt32LE(4);
+    const unpackedBase = asarPath + '.unpacked';
+
+    function extractEntry(current, currentDest, relPath) {
+        if (current.files) {
+            fs.mkdirSync(currentDest, { recursive: true });
+            for (const [name, entry] of Object.entries(current.files)) {
+                const childRel = relPath ? relPath + '/' + name : name;
+                extractEntry(entry, path.join(currentDest, name), childRel);
+            }
+        } else {
+            fs.mkdirSync(path.dirname(currentDest), { recursive: true });
+            if (current.unpacked) {
+                const srcUnpacked = path.join(unpackedBase, relPath);
+                if (fs.existsSync(srcUnpacked)) {
+                    fs.copyFileSync(srcUnpacked, currentDest);
+                }
+                return;
+            }
+            const buf = Buffer.alloc(current.size);
+            fs.readSync(fd, buf, 0, current.size, baseOffset + parseInt(current.offset, 10));
+            fs.writeFileSync(currentDest, buf, { mode: current.executable ? 0o755 : 0o644 });
+        }
+    }
+
+    extractEntry(header, destDir, '');
+    fs.closeSync(fd);
+    return header;
+}
+
+function purePackAsar(srcDir, destFile, originalHeader = null) {
+    const unpackedSet = new Set();
+    if (originalHeader) {
+        function findUnpacked(current, relPath) {
+            if (current.files) {
+                for (const [name, entry] of Object.entries(current.files)) {
+                    const childRel = relPath ? relPath + '/' + name : name;
+                    findUnpacked(entry, childRel);
+                }
+            } else if (current.unpacked) {
+                unpackedSet.add(relPath);
+            }
+        }
+        findUnpacked(originalHeader, '');
+    }
+
+    const filesToWrite = [];
+    let currentOffset = 0;
+
+    function walk(dir, relPath = '') {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        const dirObj = { files: {} };
+        entries.sort((a, b) => a.name.localeCompare(b.name));
+
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            const entryRel = relPath ? relPath + '/' + entry.name : entry.name;
+            if (entry.isDirectory()) {
+                dirObj.files[entry.name] = walk(fullPath, entryRel);
+            } else if (entry.isFile() || entry.isSymbolicLink()) {
+                const stat = fs.statSync(fullPath);
+                const fileBuf = fs.readFileSync(fullPath);
+                const isUnpacked = unpackedSet.has(entryRel);
+
+                const fileRecord = {
+                    size: stat.size,
+                    integrity: computeAsarIntegrity(fileBuf)
+                };
+
+                if (isUnpacked) {
+                    fileRecord.unpacked = true;
+                } else {
+                    fileRecord.offset = currentOffset.toString();
+                    currentOffset += stat.size;
+                    filesToWrite.push(fileBuf);
+                }
+
+                if ((stat.mode & 0o111) !== 0) {
+                    fileRecord.executable = true;
+                }
+                dirObj.files[entry.name] = fileRecord;
+            }
+        }
+        return dirObj;
+    }
+
+    const header = walk(srcDir);
+    const jsonString = JSON.stringify(header);
+    const jsonBuf = Buffer.from(jsonString, 'utf8');
+    const jsonLen = jsonBuf.length;
+    const padding = (4 - (jsonLen % 4)) % 4;
+    const headerPayloadSize = 4 + 4 + jsonLen + padding;
+
+    const headerBuf = Buffer.alloc(16 + jsonLen + padding);
+    headerBuf.writeUInt32LE(4, 0);
+    headerBuf.writeUInt32LE(headerPayloadSize, 4);
+    headerBuf.writeUInt32LE(headerPayloadSize - 4, 8);
+    headerBuf.writeUInt32LE(jsonLen, 12);
+    jsonBuf.copy(headerBuf, 16);
+
+    const outFd = fs.openSync(destFile, 'w');
+    fs.writeSync(outFd, headerBuf);
+    for (const buf of filesToWrite) {
+        fs.writeSync(outFd, buf);
+    }
+    fs.closeSync(outFd);
 }
 
 // ==========================================
@@ -819,11 +1037,20 @@ function install20(resourcesDir) {
         fs.rmSync(tempDir, { recursive: true, force: true });
     }
 
-    console.log(`[解包] 正在使用 npx 提取 app.asar...`);
-    const extractRes = runCommandSync(`npx -y @electron/asar extract "${asarPath}" "${tempDir}"`);
-    if (!extractRes.success || !fs.existsSync(tempDir)) {
-        console.error(`[错误] 解包失败，可能是由于系统未安装 Node.js/npm 或者网络限制。`);
-        console.error(`详情: ${extractRes.stderr}\n${extractRes.stdout}`);
+    console.log(`[解包] 正在提取 app.asar...`);
+    let origHeader = null;
+    let extractSuccess = false;
+    try {
+        origHeader = pureExtractAsar(asarPath, tempDir);
+        extractSuccess = true;
+    } catch (err) {
+        console.warn(`[提示] 内置解包引擎提示: ${err.message}，尝试回退系统命令解包...`);
+        const extractRes = runCommandSync(`npx -y @electron/asar extract "${asarPath}" "${tempDir}"`);
+        extractSuccess = extractRes.success && fs.existsSync(tempDir);
+    }
+
+    if (!extractSuccess || !fs.existsSync(tempDir)) {
+        console.error(`[错误] 解包失败，可能是由于系统未安装 Node.js 或者权限受限。`);
         return false;
     }
 
@@ -1060,14 +1287,21 @@ function install20(resourcesDir) {
 
     // 4. 重新打包
     console.log(`[打包] 正在将修改后的内容打包回 app.asar...`);
-    const packRes = runCommandSync(`npx -y @electron/asar pack "${tempDir}" "${asarPath}"`);
+    let packSuccess = false;
+    try {
+        purePackAsar(tempDir, asarPath, origHeader);
+        packSuccess = true;
+    } catch (err) {
+        console.warn(`[提示] 内置打包引擎提示: ${err.message}，尝试回退系统命令打包...`);
+        const packRes = runCommandSync(`npx -y @electron/asar pack "${tempDir}" "${asarPath}"`);
+        packSuccess = packRes.success;
+    }
     
     // 5. 清理临时文件夹
     fs.rmSync(tempDir, { recursive: true, force: true });
 
-    if (!packRes.success) {
+    if (!packSuccess) {
         console.error(`[错误] 打包失败。`);
-        console.error(`详情: ${packRes.stderr}\n${packRes.stdout}`);
         return false;
     }
 
@@ -1092,11 +1326,12 @@ function restore20(resourcesDir) {
         fs.unlinkSync(bakPath);
     } catch (e) {
         console.error(`[错误] 恢复备份失败: ${e.message}`);
-        if (process.platform === 'darwin' && e.code === 'EPERM') {
-            console.error(`[提示] macOS 写入受限，请使用管理员权限运行脚本。`);
+        if ((process.platform === 'darwin' || process.platform === 'linux') && (e.code === 'EPERM' || e.code === 'EACCES')) {
+            console.error(`[提示] 应用目录写入受限，请使用管理员权限 (sudo) 运行脚本。`);
         }
         return false;
     }
+    cleanElectronCache();
     resignAppOnMac(resourcesDir);
     console.log("[√] 官方 app.asar 已成功恢复！");
     return true;
@@ -1387,6 +1622,27 @@ function main() {
             } else if (process.platform === 'darwin') {
                 child_process.exec(`open "${installDir}"`);
                 console.log("[启动] 客户端启动成功！");
+            } else if (process.platform === 'linux') {
+                const candidateBins = [
+                    path.join(installDir, 'antigravity'),
+                    path.join(installDir, 'Antigravity')
+                ];
+                let launched = false;
+                for (const binPath of candidateBins) {
+                    if (fs.existsSync(binPath)) {
+                        const child = child_process.spawn(binPath, [], {
+                            detached: true,
+                            stdio: 'ignore'
+                        });
+                        child.unref();
+                        console.log("[启动] 客户端启动成功！");
+                        launched = true;
+                        break;
+                    }
+                }
+                if (!launched) {
+                    console.warn(`[警告] 未找到客户端主程序 (antigravity/Antigravity)`);
+                }
             }
         } catch (e) {
             console.warn(`[警告] 客户端启动失败: ${e.message}`);

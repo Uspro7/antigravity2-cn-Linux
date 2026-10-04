@@ -1,12 +1,30 @@
-# Antigravity 2.0 智能编程中文语言包 & 汉化引擎
+# Antigravity 2.0 中文语言包 & 汉化引擎 (Linux / Windows / macOS)
 
 👉 **[繁體中文版說明文件 (Traditional Chinese README)](README_TW.md)**
 
-> **支持系统**：Windows & macOS (均已内置一键脚本)  
-> **匹配版本**：Antigravity v2.12.2  
-> **核心引擎**：Node.js (无需安装 Python，零依赖，极速极稳)  
-> **汉化范围**：包括软件界面、顶部系统菜单、任务栏右键菜单、加载动画、设置面板、新手引导及登录页。  
-> **注入原理**：通过 ASAR 还原与重包，安全注入 `preload.js` 动态翻译机制，绝不修改核心二进制，一键安装与完美还原。
+> **支持系统**：Linux & Windows & macOS (全平台均内置一键脚本)  
+> **匹配版本**：Antigravity v2.12.2+  
+> **核心引擎**：Node.js (**内置纯 JS 零依赖 ASAR 解包与打包引擎，100% 离线极速运行**)  
+> **汉化范围**：软件主界面、顶部系统菜单、任务栏/托盘右键菜单、加载动画、参数设置面板、新手引导及登录页。  
+> **注入原理**：基于 ASAR 物理层解包与精准重包机制，安全注入 `preload.js` 动态翻译引擎与菜单 patch，绝不破坏核心二进制，支持随时一键无痕还原官方原版。  
+> **开源说明**：本项目基于优秀开源项目 [qqxpee/antigravity2-cn](https://github.com/qqxpee/antigravity2-cn) 进行深度二次开发与增强，重点打造了 **Linux 平台的原生适配**，并重构内置了 **零依赖纯 JS ASAR 引擎**，彻底摆脱原版对 `npx @electron/asar` 及外网下载的依赖。
+
+---
+
+## ✨ Linux 增强版核心特性
+
+- 🐧 **原生 Linux 深度适配**：
+  - 自动探测主流 Linux 发行版（Ubuntu、Debian、Fedora、Arch Linux、openSUSE 等）的各类安装位置（`~/ProgramFile/Antigravity-x64`、`/opt/Antigravity`、`~/.local/share/antigravity` 等）。
+  - 支持通过 `which antigravity`、`.desktop` 桌面图标及运行中进程 `/proc/<pid>/exe` 智能推导安装路径。
+  - 精准识别 GUI 进程，关闭客户端时绝不误杀后台 `language_server` 智能体分析服务。
+  - 针对系统级目录（如 `/opt`）支持智能 `sudo` 提权检测。
+- ⚡ **内置纯 JS 零依赖 ASAR 引擎**：
+  - 原版依赖 `npx -y @electron/asar` 联网拉取依赖，国内网络或代理异常时极易卡死或报错（如 403 Forbidden）。
+  - 本项目内置原生 JavaScript Chromium Pickle / ASAR 引擎，自动计算并填充 4MB 分块 SHA256 integrity 校验哈希，解包与重打包仅需 **100~200 毫秒**，纯离线可用。
+- 🖱️ **一键双击与终端多模态支持**：
+  - 内置 `.sh` 脚本既可在终端中直接执行，也支持在 Linux 桌面文件管理器（GNOME Nautilus、KDE Dolphin、XFCE 等）中直接双击自动唤起独立终端窗口交互运行。
+
+---
 
 > [!WARNING]
 > **关于聊天历史记录/对话框内容被汉化的已知问题及匹配机制说明（开发者必读）**：
@@ -15,7 +33,8 @@
 >   - **短词（长度 <= 15 字符，如 `Knowledge`）**：翻译仅在词条 **完全精准匹配（且单独占一行）** 时触发。如果该词前后有其他任何字符、空格或标点符号（如 `Knowledge是什么`、`哈哈 Knowledge`），则 **绝对不会** 被翻译。如果需要强行阻止其翻译，可使用中文双引号将其包裹（如 `“Knowledge”`）即可完美规避。
 >   - **长句（长度 > 15 字符，如 `Enable Antigravity to deploy apps...`）**：由于需要兼容界面动态渲染，长句采用 **“子串滑动替换”** 算法。这意味着只要输入的文本中包含了这一长串完整英文字句，该段子串就会被自动翻译成中文（即使加了引号或前后带有文字）。但由于长句匹配极其苛刻，必须一字不差（包括大小写、标点和空格），因此实际聊天中几乎不可能误触发。
 > - **说明**：这**不影响 AI 接收到的原文**。大模型获取到的依旧是你发送的纯正英文原始指令，仅在软件的视觉渲染层面发生了汉化，纯属视觉影响，无需担心影响大模型的效果。
-> - **欢迎提 PR**：由于 Electron 沙箱及 iframe webview DOM 树隔离问题，此处难以直接利用主窗口类名隔离，期待有缘人提交 PR 完美解决该问题！
+
+---
 
 ## 📸 汉化效果展示
 
@@ -33,174 +52,170 @@
 ---
 
 ## 📂 项目文件结构
-- **`双击安装中文汉化.bat`** / **`.command`**：Windows / macOS 一键汉化执行入口。
-- **`双击卸载还原官方英文.bat`** / **`.command`**：Windows / macOS 一键完美恢复原版入口。
-- **`localization_engine.js`**：核心汉化逻辑，负责 app.asar 的解包、代码注入、重新打包以及 macOS 下的自动深度重签名。
-- **`dicts/`**：汉化字典文件夹，内含按模块分类的 JSON 对照翻译字典。
+
+```text
+├── 双击安装中文汉化.sh          # [Linux] 简体中文一键安装入口
+├── 双击安装繁体中文.sh          # [Linux] 繁体中文一键安装入口
+├── 双击卸载还原官方英文.sh      # [Linux] 一键卸载恢复官方英文入口
+├── 双击安装中文汉化.bat         # [Windows] 简体中文一键安装
+├── 双击安装繁体中文.bat         # [Windows] 繁体中文一键安装
+├── 双击卸载还原官方英文.bat     # [Windows] 一键卸载恢复
+├── 双击安装中文汉化.command     # [macOS] 简体中文一键安装
+├── 双击安装繁体中文.command     # [macOS] 繁体中文一键安装
+├── 双击卸载还原官方英文.command # [macOS] 一键卸载恢复
+├── localization_engine.js      # 核心跨平台汉化引擎 (内置纯 JS 零依赖 ASAR 模块)
+├── dicts/                      # 简体中文模块化对照词典 (JSON)
+├── dicts_tw/                   # 繁体中文模块化对照词典 (JSON)
+├── showimg/                    # 界面效果预览截图
+├── README.md                   # 简体中文说明文档
+└── README_TW.md                # 繁体中文说明文档
+```
 
 ---
 
 ## 🚀 极速使用指南
 
-### 1. 获取汉化包代码（二选一）
+### 1. 获取代码
 
-* **方法 A：直接下载 ZIP 压缩包（最便捷 📦）**
-  1. 点击页面右上角绿色的 **`Code`** 按钮。
-  2. 在下拉菜单中选择 **`Download ZIP`** 并下载。
-  3. 将下载好的压缩包**解压到您电脑本地的任意目录**（例如您的 `Downloads` 文件夹）。
-
-* **方法 B：通过 Git 命令行克隆（开发者推荐 💻）**
-  如果您本地安装了 Git，可以直接在终端运行克隆命令：
+* **通过 Git 命令行克隆（推荐 💻）**：
   ```bash
-  # 如果您在国内，推荐使用下方代理加速克隆地址：
-  git clone https://mirror.ghproxy.com/https://github.com/qqxpee/antigravity2-cn.git
-  
-  # 如果您配置了全局代理，可直接使用官方地址：
-  git clone https://github.com/qqxpee/antigravity2-cn.git
+  git clone https://github.com/Uspro7/antigravity2-cn-Linux.git
+  cd antigravity2-cn-Linux
   ```
+  *(若在国内网络受限，可使用镜像地址：`git clone https://mirror.ghproxy.com/https://github.com/Uspro7/antigravity2-cn-Linux.git`)*
+
+* **或直接下载 ZIP 压缩包 📦**：
+  点击页面右上角 **Code -> Download ZIP**，下载后解压至本地任意目录。
 
 ---
 
 ### 2. 一键安装汉化
-1. **完全退出** Antigravity 编程软件。
-2. 进入您解压或克隆出来的 `antigravity2-cn` 文件夹：
-   - **Windows**：双击运行 **`双击安装中文汉化.bat`**。
-   - **macOS**：双击运行 **`双击安装中文汉化.command`**。
-3. 按提示选择左上角品牌显示方式：
-   - **显示英文 Antigravity（默认推荐）**：保留官方品牌名，避免左上角显示过长。
-   - **不显示品牌名**：隐藏左上角的品牌文字。
-   - **显示中文品牌名**：保持原汉化效果，显示“反重力智能编程”。
-4. 运行完成后，重新启动 Antigravity 软件，即可畅享全中文界面！
 
-### 品牌显示命令行参数
+1. **完全退出** Antigravity 软件。
+2. 运行安装脚本：
+   - **Linux**：在终端运行 `./双击安装中文汉化.sh`（或在图形文件管理器中直接双击运行）。
+   - **Windows**：双击运行 `双击安装中文汉化.bat`。
+   - **macOS**：双击运行 `双击安装中文汉化.command`。
+3. 按提示选择左上角品牌名展示方式：
+   - **[1] 显示英文 Antigravity（推荐）**：保留官方英文名称，排版紧凑。
+   - **[2] 不显示品牌名**：隐藏标题左上角品牌名称。
+   - **[3] 显示中文品牌名**：显示为“反重力智能编程”。
+4. 运行完成后启动 Antigravity 软件，即可畅享全中文界面！
 
-如果您通过命令行运行 `localization_engine.js`，可使用 `--brand-title` 控制左上角品牌名：
+> **需要繁体中文？**
+> 运行对应的 `双击安装繁体中文.sh` / `.bat` / `.command` 即可一键部署繁体中文。
+
+#### 高级命令行参数
+
+如果您通过终端调用 `localization_engine.js`，可以使用以下参数：
 
 ```bash
-# 默认推荐：左上角显示 Antigravity
+# 指定安装目录 (若未自动探测到您的自定义路径)
+node localization_engine.js --install-dir /path/to/Antigravity
+
+# 控制品牌名称模式：english(默认) | hidden | translated
 node localization_engine.js --brand-title english
 
-# 隐藏左上角品牌名
-node localization_engine.js --brand-title hidden
+# 繁体中文模式
+node localization_engine.js --tw
 
-# 显示中文品牌名
-node localization_engine.js --brand-title translated
+# 跳过自动关闭运行中客户端
+node localization_engine.js --no-kill
+
+# 一键卸载恢复官方原版
+node localization_engine.js --huifu
 ```
 
 ---
 
 ### 3. 一键卸载还原
-1. **完全退出** Antigravity 编程软件。
-2. 在当前文件夹下：
-   - **Windows**：双击运行 **`双击卸载还原官方英文.bat`**。
-   - **macOS**：双击运行 **`双击卸载还原官方英文.command`**。
-3. 运行完成后，软件将自动清除所有汉化注入，无痕恢复至官方原版英文状态。
+
+若需要升级软件或还原至官方纯净英文版：
+1. 完全退出 Antigravity。
+2. 运行卸载脚本：
+   - **Linux**：运行 `./双击卸载还原官方英文.sh`
+   - **Windows**：运行 `双击卸载还原官方英文.bat`
+   - **macOS**：运行 `双击卸载还原官方英文.command`
+3. 脚本会自动使用安装时备份的 `app.asar.bak` 无痕还原，并自动清理相关应用缓存。
 
 ---
 
 ## 🔌 可选高级功能：网络透明代理自动注入 (Windows 免 TUN 方案)
 
-如果您处于网络受限环境（例如连通 Google AI / Gemini 接口受阻），且不希望开启系统的全局虚拟网卡/TUN 模式，本项目支持在安装汉化时**自动联动注入 Windows 免 TUN 强制代理工具**。
+如果您处于网络受限环境（例如连通 Google AI / Gemini 接口受阻），且不希望开启系统的全局虚拟网卡/TUN 模式，本项目在 Windows 下支持在安装汉化时**自动联动注入免 TUN 强制代理工具**。
 
 该方案基于优秀的开源项目 **[yuaotian/antigravity-proxy](https://github.com/yuaotian/antigravity-proxy)**（基于 MinHook 的 DLL 劫持透明代理）。
 
 ### 使用方法：
 1. 前往 **[yuaotian/antigravity-proxy](https://github.com/yuaotian/antigravity-proxy)** 获取编译好的文件：
-   - `version.dll`
-   - `dbghelp.dll`
-   - `config.json`
-2. 在当前汉化项目根目录新建 `proxy_config` 文件夹（该文件夹已加入 `.gitignore` 本地排除，绝不会被 Git 提交污染）。
-3. 将 `version.dll`、`dbghelp.dll` 以及按您本地代理端口（如 `127.0.0.1:7890` / `18080`）配置好的 `config.json` 放入 `proxy_config/` 目录。
-4. 正常双击运行 **`双击安装中文汉化.bat`**：
-   - 汉化引擎将**自动检测** `proxy_config/` 目录。
-   - 一步自动完成 **“界面中文汉化 + 代理模块注入”**，无需再在软件更新后每次手动拷贝 DLL 文件！
-5. **完全可选 & 零侵入**：
-   - 如果您不需要代理或未创建 `proxy_config/` 目录，安装流程保持 100% 官方纯净汉化，对普通用户零干扰。
-   - 运行 **`双击卸载还原官方英文.bat`** 时，同样会自动识别并清理安装目录下的代理文件，完美恢复官方纯净状态。
+   - `version.dll`、`dbghelp.dll`、`config.json`
+2. 在当前汉化项目根目录新建 `proxy_config` 文件夹（已配置 `.gitignore`，不会被 Git 提交）。
+3. 将上述文件按本地代理端口配置好后放入 `proxy_config/` 目录。
+4. 正常运行 `双击安装中文汉化.bat`，引擎将**自动检测并一次性完成汉化与代理模块注入**。
 
 ---
 
 ## 🛠️ 汉化原理说明
 
-本引擎采用 **ASAR 包注入模式**，专为 **Antigravity 2.0+** 的 Electron 架构量身定制：
-1. **自动释放锁**：脚本运行前会自动探测并安全关闭 Antigravity 进程，防止文件占用锁定。
-2. **安全备份**：首次运行时，会在软件目录自动创建原始 `app.asar.bak` 文件，确保随时可无损还原。
+本引擎专为 **Antigravity 2.0+** 的 Electron 架构量身定制：
+1. **自动释放锁**：运行前智能探测并安全关闭主界面进程，防止文件占用锁定。
+2. **安全备份**：首次运行时自动创建 `app.asar.bak` 原始包备份，确保随时可无损一键复原。
 3. **精准注入**：
-   - 注入 `preload.js`：采用 WeakSet 记录与 Shadow DOM 穿透，启动高效的 `MutationObserver` 引擎，动态监测并将渲染层文本翻译为中文。
-   - 注入 `menu.js`：深度补丁系统级标题栏菜单。
-   - 注入 `tray.js`：汉化托盘与右键通知状态菜单。
-   - 注入 `loadingOverlay.js`：注入极具极客风格的趣味加载语：“反重力引擎已启动，正在摆脱地心引力...”。
+   - `preload.js`：采用 WeakSet 记录与 Shadow DOM 穿透，启动高效的 `MutationObserver` 引擎，动态监测并将渲染层文本翻译为中文。
+   - `menu.js`：深度打补丁系统原生顶部菜单。
+   - `tray.js`：汉化任务栏托盘与右键通知状态菜单。
+   - `loadingOverlay.js`：注入趣味加载动画提示文案。
+   - `updater.js`：汉化更新提示弹窗。
+4. **重新打包与校验**：内置 ASAR 打包器重新封装，计算 SHA256 integrity 保证 Electron 完整性校验通过，并自动清理旧字节码缓存。
 
 ---
 
 ## 💡 如何通过 AI 助手自动补充或修改汉化？
 
-如果在使用过程中，您发现了漏译的英文，或者觉得某些中文翻译不够接地气，**您可以直接在聊天窗口中命令您的 AI 编码助手（即 Antigravity）来帮您更新词库**！无论是直接发截图还是描述文字，AI 都会自动帮您把对照词条写进词典。
+在使用过程中如果发现未翻译或漏译的英文，**您可以直接在 Antigravity 聊天窗口中让 AI 助手帮您补充词典**！
 
-> [!IMPORTANT]
-> **⚠️ AI 助手如何定位您的汉化词库文件？**
-> 
-> 1. **推荐做法（最省心）**：
->    在 Antigravity 软件中，点击 **“打开文件夹 (Open Folder)”**，直接将本汉化包目录（即包含当前 `README.md` 的文件夹）作为**项目/工作区**打开，然后在此工作区下与 AI 对话。此时 AI 能够直接感知并读写当前项目，您不需要提供任何路径，直接发送翻译要求，AI 就能在后台自动帮您改好词典！
-> 
-> 2. **免开项目做法（提示词中需指定汉化目录）**：
->    如果您当前正在开发别的项目，没有把汉化目录作为项目打开，那么您在对 AI 发起汉化命令时，**必须在提示词里明确告诉 AI 您的汉化包所在路径**，否则 AI 无法得知要修改您电脑上的哪个文件夹。
->    * **提示词示例**：
->      > **“我的汉化包目录在 `C:\Users\您的电脑用户名\Downloads\antigravity_chinese`（请替换为您本地的实际路径），请帮我把下面这张截图里漏译的内容补全到词典里。”**
-
-### 📋 常用提示词（Prompt）模板
-
-#### 1. 方式一：直接在聊天中发送截图（推荐 📸）
-如果您不方便打字，可以直接将未汉化干净的界面截图粘贴发送给 AI，并附带以下指令：
-> **“帮我把这张截图里所有未汉化的英文选项和面板内容补全到中文词典中。”**
-*(AI 会自动通过视觉识别截图中的全部英文，并精准写入字典。)*
-
-#### 2. 方式二：直接在聊天中发送文字描述（极速 ✍️）
-如果您只想修改或增加某一个特定词汇，可以直接发送文字描述给 AI：
-> **“帮我把漏译的英文 'Allow agent to view and edit files outside of the current workspace automatically' 汉化为 '允许智能体自动查看并编辑当前工作区之外的文件'。”**
-*(AI 会立即找到对应的词典并精准修改或追加该词条。)*
+> [!TIP]
+> **最佳姿势**：在 Antigravity 中点击 **“打开文件夹 (Open Folder)”**，直接将本汉化包目录作为**项目/工作区**打开，在当前窗口中向 AI 发送截图或文字即可！
+> - **截图提示词**：> *“帮我把这张截图里所有未汉化的英文选项和面板内容补全到中文词典中。”*
+> - **文字提示词**：> *“帮我把漏译的英文 'Allow agent to view and edit files outside workspace' 汉化为 '允许智能体编辑工作区外的文件'。”*
+>
+> 词典修改保存后，只需重新运行一次安装脚本即可立即生效！
 
 ---
 
-### 🔄 更新生效流程
-1. **命令 AI 更新**：在对话中通过截图或文字告诉 AI 您的汉化需求，AI 会自动更新 `dicts/` 下的字典文件。
-2. **退出软件**：**完全退出**您的 Antigravity 软件。
-3. **重新注入**：在当前文件夹中**再次双击运行 `双击安装中文汉化.bat` / `.command`** 重新部署汉化。
-4. **重启软件**：重新打开 Antigravity，您的改动即可完美生效！
+## ❓ 常见问题解答 (FAQ)
+
+### 1）Linux 提示 Permission denied 或权限不足
+* **解决**：赋予脚本执行权限：
+  ```bash
+  chmod +x *.sh
+  ```
+  如果您的 Antigravity 安装在 `/opt` 或 `/usr` 等系统目录，请使用管理员权限运行：
+  ```bash
+  sudo ./双击安装中文汉化.sh
+  ```
+
+### 2）Linux 未能自动找到 Antigravity 安装路径
+* **解决**：可以使用 `--install-dir` 手动指定安装路径，例如：
+  ```bash
+  node localization_engine.js --install-dir /home/你的用户名/ProgramFile/Antigravity-x64
+  ```
+  也可以设置环境变量：
+  ```bash
+  export ANTIGRAVITY_INSTALL_DIR="/home/你的用户名/ProgramFile/Antigravity-x64"
+  ./双击安装中文汉化.sh
+  ```
+
+### 3）macOS 提示“无法打开”或权限问题
+* **解决**：在终端中执行 `chmod +x *.command`。本引擎已内置自动本地 Ad-hoc 深度重签名机制 (`codesign`)，自动消除修改后的系统安全拦截警告。
+
+### 4）软件官方版本更新后汉化失效了怎么办？
+* 软件官方升级会覆盖 `app.asar` 文件。只需完全退出软件，重新运行一次安装脚本即可重新部署汉化！
 
 ---
 
-## 📝 词典自定义指南 (供极客手动使用)
+## 🤝 致谢与声明
 
-如果您想手动修改翻译，可以直接打开 `dicts/` 目录下的 JSON 文件：
-- **`common.json`**：公共基础词汇、侧边栏概览、登录页、常用按钮等。
-- **`page_settings.json`**：包含极其丰富的详细设置面板、权限二级菜单对照。
-- **`menu_nav.json`**：系统及菜单栏翻译。
-
-在 JSON 中新增一行，格式如下即可（注意英文逗号）：
-```json
-"Original English Text": "您的中文翻译"
-```
-保存后，双击运行 **`双击安装中文汉化.bat` / `.command`** 重新部署汉化即可。
-
----
-
-## 常见问题解答 (FAQ)
-
-### 1）提示“解包失败”或缺少 npm 环境
-* **原因**：汉化引擎依赖 Node.js 进行 ASAR 包的解析。
-* **解决**：由于 Antigravity 本身就是一个基于 Node.js/Electron 的程序，您的电脑一般都已自带环境。如果极少数情况下报错，只需在电脑安装 [Node.js](https://nodejs.org/)（LTS 版本即可）并重启脚本。
-
-### 2）提示“权限不足”或 macOS 提示“无法打开”
-* **解决**：
-  - **Windows**：请右键点击 `双击安装中文汉化.bat`，选择 **“以管理员身份运行”**。
-  - **macOS**：若双击运行 `.command` 提示无法打开或没有执行权限，可在终端中执行 `chmod +x *.command` 来授权。如果是系统安全拦截，请在“系统设置 -> 隐私与安全性”中点击“仍要打开”。本汉化包已内置自动重签名机制，修改后会重新进行 Ad-hoc 签名以防止 macOS 提示应用损坏。
-
-### 3）软件官方更新后，汉化失效了怎么办？
-* 软件升级时，官方会覆盖 `app.asar` 文件。您无需担心，直接完全退出软件，重新双击运行 **`双击安装中文汉化.bat`** 重新注入一次即可完美恢复中文。
-
----
-
-## 🤝 致谢
-- 感谢所有参与测试与反馈的贡献者！
-- 特别鸣谢 **[yuaotian/antigravity-proxy](https://github.com/yuaotian/antigravity-proxy)** 提供优秀的 Windows 免 TUN 强制代理注入方案。
+- 核心字典与基础逻辑致谢上游项目：**[qqxpee/antigravity2-cn](https://github.com/qqxpee/antigravity2-cn)**
+- Windows 透明代理方案致谢：**[yuaotian/antigravity-proxy](https://github.com/yuaotian/antigravity-proxy)**
+- 欢迎提交 Issue 与 PR 共同完善全平台中文生态！
