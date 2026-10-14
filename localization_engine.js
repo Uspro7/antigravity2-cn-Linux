@@ -1194,8 +1194,8 @@ function install20(resourcesDir) {
         let trayCleaned = cleanTrayJsContent(trayContent);
         
         // 1. 注入 createTray 里的翻译块 (带标记)
-        const targetCreate = "function createTray(actions) {";
-        const replacementCreate = `function createTray(actions) {
+        const targetCreate = /function createTray\s*\(([^)]*)\)\s*\{/;
+        const replacementCreate = `function createTray($1) {
     /* --- TRAY TRANSLATION START --- */
     const translations = ${USE_TW ? `{
         'No agents running': '無執行中的代理',
